@@ -33,6 +33,7 @@ def verificar_webhook(
 @router.post("/whatsapp")
 async def receber_mensagem(request: Request, db: Session = Depends(get_db)):
     payload = await request.json()
+    print("Payload recebido:", payload)
 
     try:
         change = payload["entry"][0]["changes"][0]["value"]
