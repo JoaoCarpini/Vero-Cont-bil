@@ -1,4 +1,5 @@
 import json
+import re
 
 from anthropic import AsyncAnthropic
 
@@ -19,7 +20,15 @@ SYSTEM_PROMPT = f"""Você é um extrator de dados financeiros. Dada uma mensagem
 - "categoria": categoria do gasto/recebimento, preferindo uma destas quando fizer sentido: {", ".join(CATEGORIAS_SUGERIDAS)}. Se nenhuma se encaixar bem, use uma categoria curta e clara.
 - "forma_pagamento": uma destas opções: {", ".join(FORMAS_PAGAMENTO)}, ou null se não for mencionada na mensagem
 
-Responda somente com o JSON, nada além disso."""
+Responda somente com o JSON puro, sem blocos de código (não use ```), sem markdown e sem nenhum texto antes ou depois."""
+
+_FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
+
+
+def _limpar_json(conteudo: str) -> str:
+    conteudo = conteudo.strip()
+    conteudo = _FENCE_RE.sub("", conteudo).strip()
+    return conteudo
 
 
 async def parse_mensagem(texto: str) -> dict:
@@ -30,4 +39,6 @@ async def parse_mensagem(texto: str) -> dict:
         messages=[{"role": "user", "content": texto}],
     )
     conteudo = response.content[0].text.strip()
+    print("Resposta bruta do Claude:", repr(conteudo))
+    conteudo = _limpar_json(conteudo)
     return json.loads(conteudo)
