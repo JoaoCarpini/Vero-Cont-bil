@@ -13,6 +13,9 @@ class Settings(BaseSettings):
 
     IMPORT_API_KEY: str
 
+    DASHBOARD_API_KEY: str
+    CORS_ORIGINS: str = "http://localhost:5173"
+
     class Config:
         env_file = ".env"
         extra = "ignore"
@@ -26,6 +29,9 @@ class Settings(BaseSettings):
             user_id, _, nome = par.partition(":")
             usuarios[user_id.strip()] = nome.strip()
         return usuarios
+
+    def cors_origins_list(self) -> list[str]:
+        return [origem.strip() for origem in self.CORS_ORIGINS.split(",") if origem.strip()]
 
 
 settings = Settings()
