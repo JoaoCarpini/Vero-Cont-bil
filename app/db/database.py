@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -30,3 +32,53 @@ def ensure_schema() -> None:
     with engine.begin() as conn:
         for coluna in colunas_novas:
             conn.execute(text(f"ALTER TABLE transacoes ADD COLUMN {coluna} VARCHAR"))
+
+    if "perfil" in inspector.get_table_names():
+        colunas_existentes = {c["name"] for c in inspector.get_columns("perfil")}
+        colunas_novas = {"salario_base_30_dias", "salario_base_31_dias"} - colunas_existentes
+
+        with engine.begin() as conn:
+            for coluna in colunas_novas:
+                conn.execute(text(f"ALTER TABLE perfil ADD COLUMN {coluna} NUMERIC(10, 2)"))
+
+
+def seed_dados_iniciais() -> None:
+    """Popula perfil e gastos recorrentes com os valores iniciais, se ainda não existirem."""
+    from app.models.gasto_recorrente import GastoRecorrente
+    from app.models.perfil import Perfil
+
+    db = SessionLocal()
+    try:
+        if db.query(Perfil).count() == 0:
+            db.add(
+                Perfil(
+                    salario_base_30_dias=Decimal("1016.07"),
+                    salario_base_31_dias=Decimal("1056.97"),
+                )
+            )
+
+        if db.query(GastoRecorrente).count() == 0:
+            db.add_all(
+                [
+                    GastoRecorrente(
+                        descricao="Memória RAM",
+                        valor_mensal=Decimal("83.67"),
+                        categoria="Compras",
+                        parcelas_totais=10,
+                        parcelas_pagas=7,
+                        ativo=True,
+                    ),
+                    GastoRecorrente(
+                        descricao="Assinatura Claude",
+                        valor_mensal=Decimal("55.00"),
+                        categoria="Assinaturas",
+                        parcelas_totais=None,
+                        parcelas_pagas=None,
+                        ativo=True,
+                    ),
+                ]
+            )
+
+        db.commit()
+    finally:
+        db.close()
