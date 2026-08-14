@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     TELEGRAM_WEBHOOK_SECRET: str
     TELEGRAM_USUARIOS_PERMITIDOS: str  # formato "user_id:Nome,user_id:Nome"
 
+    IMPORT_API_KEY: str
+
     class Config:
         env_file = ".env"
         extra = "ignore"

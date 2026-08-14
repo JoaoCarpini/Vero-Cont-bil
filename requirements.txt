@@ -7,3 +7,4 @@ python-dotenv
 anthropic
 httpx
 tzdata
+python-multipart
