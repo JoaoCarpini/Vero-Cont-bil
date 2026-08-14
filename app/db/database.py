@@ -76,6 +76,14 @@ def seed_dados_iniciais() -> None:
                         parcelas_pagas=None,
                         ativo=True,
                     ),
+                    GastoRecorrente(
+                        descricao="Faculdade",
+                        valor_mensal=Decimal("527.64"),
+                        categoria="Educação",
+                        parcelas_totais=29,  # de agosto/2026 até dezembro/2028
+                        parcelas_pagas=0,
+                        ativo=True,
+                    ),
                 ]
             )
 
