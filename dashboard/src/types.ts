@@ -28,8 +28,14 @@ export interface GastoRecorrente {
   ativo: boolean;
 }
 
+export interface SaldoAtual {
+  valor: number;
+  atualizado_em: string;
+}
+
 export interface DashboardData {
   mes_referencia: string;
+  saldo_atual: SaldoAtual | null;
   saldo: Saldo;
   transacoes: Transacao[];
   distribuicao_categoria: { categoria: string; total: number }[];

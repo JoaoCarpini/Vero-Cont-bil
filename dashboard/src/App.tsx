@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { clearStoredApiKey, getStoredApiKey, setStoredApiKey } from "./api/client";
+import { clearStoredApiKey, getStoredApiKey, setStoredApiKey, updateSaldoAtual } from "./api/client";
 import { ApiKeyGate } from "./components/ApiKeyGate";
 import { DashboardView } from "./components/DashboardView";
 import { useDashboard } from "./hooks/useDashboard";
@@ -31,6 +31,12 @@ export default function App() {
     setApiKey(null);
   }
 
+  async function handleSaveSaldoAtual(valor: number) {
+    if (!apiKey) return;
+    await updateSaldoAtual(valor, apiKey);
+    reload();
+  }
+
   if (!apiKey) {
     return <ApiKeyGate onSubmit={handleGateSubmit} errorMessage={gateError} />;
   }
@@ -44,6 +50,7 @@ export default function App() {
       errorMessage={errorMessage}
       onRetry={reload}
       onLogout={handleLogout}
+      onSaveSaldoAtual={handleSaveSaldoAtual}
     />
   );
 }

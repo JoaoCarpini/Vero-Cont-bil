@@ -17,9 +17,19 @@ interface Props {
   errorMessage: string | null;
   onRetry: () => void;
   onLogout: () => void;
+  onSaveSaldoAtual: (valor: number) => Promise<void>;
 }
 
-export function DashboardView({ mes, onChangeMes, status, data, errorMessage, onRetry, onLogout }: Props) {
+export function DashboardView({
+  mes,
+  onChangeMes,
+  status,
+  data,
+  errorMessage,
+  onRetry,
+  onLogout,
+  onSaveSaldoAtual,
+}: Props) {
   const isCurrentMonth = mes === currentMonth();
 
   return (
@@ -72,7 +82,12 @@ export function DashboardView({ mes, onChangeMes, status, data, errorMessage, on
 
         {status === "success" && data && (
           <div className="dashboard-grid">
-            <SaldoHero saldo={data.saldo} mesLabel={formatMonthLabel(mes)} />
+            <SaldoHero
+              saldo={data.saldo}
+              saldoAtual={data.saldo_atual}
+              onSaveSaldoAtual={onSaveSaldoAtual}
+              mesLabel={formatMonthLabel(mes)}
+            />
 
             <section className="grid-charts">
               <DistribuicaoChart

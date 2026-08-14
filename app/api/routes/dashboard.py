@@ -4,12 +4,14 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.database import get_db
 from app.models.gasto_recorrente import GastoRecorrente
+from app.models.saldo_atual import SaldoAtual
 from app.models.transacao import Transacao
 from app.services.financeiro import calcular_saldo_projetado
 
@@ -21,6 +23,36 @@ TZ = ZoneInfo("America/Sao_Paulo")
 def verificar_api_key(x_api_key: str = Header(default="")) -> None:
     if not secrets.compare_digest(x_api_key, settings.DASHBOARD_API_KEY):
         raise HTTPException(status_code=403, detail="API key inválida")
+
+
+def _serializar_datetime(dt: datetime) -> str:
+    # SQLite descarta o tzinfo ao persistir; reanexa o fuso de referência antes
+    # de serializar para o timestamp não ser mal interpretado como hora local do cliente.
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=TZ)
+    return dt.isoformat()
+
+
+class AtualizarSaldoAtualRequest(BaseModel):
+    valor: float
+
+
+@router.put("/saldo-atual", dependencies=[Depends(verificar_api_key)])
+def atualizar_saldo_atual(payload: AtualizarSaldoAtualRequest, db: Session = Depends(get_db)):
+    registro = db.query(SaldoAtual).first()
+    agora = datetime.now(TZ)
+
+    if registro is None:
+        registro = SaldoAtual(valor=payload.valor, atualizado_em=agora)
+        db.add(registro)
+    else:
+        registro.valor = payload.valor
+        registro.atualizado_em = agora
+
+    db.commit()
+    db.refresh(registro)
+
+    return {"valor": float(registro.valor), "atualizado_em": _serializar_datetime(registro.atualizado_em)}
 
 
 @router.get("/dashboard", dependencies=[Depends(verificar_api_key)])
@@ -56,9 +88,15 @@ def obter_dashboard(
     )
 
     gastos_recorrentes = db.query(GastoRecorrente).order_by(GastoRecorrente.id).all()
+    saldo_atual = db.query(SaldoAtual).first()
 
     return {
         "mes_referencia": mes_referencia,
+        "saldo_atual": (
+            {"valor": float(saldo_atual.valor), "atualizado_em": _serializar_datetime(saldo_atual.atualizado_em)}
+            if saldo_atual
+            else None
+        ),
         "saldo": {
             "salario_base": float(saldo["salario_base"]),
             "entradas_lancadas": float(saldo["entradas_lancadas"]),
