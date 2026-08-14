@@ -35,6 +35,7 @@ export interface SaldoAtual {
 
 export interface DashboardData {
   mes_referencia: string;
+  eh_projecao: boolean;
   saldo_atual: SaldoAtual | null;
   saldo: Saldo;
   transacoes: Transacao[];

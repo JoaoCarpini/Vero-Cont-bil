@@ -1,4 +1,4 @@
-import type { DashboardData, SaldoAtual } from "../types";
+import type { DashboardData, GastoRecorrente, SaldoAtual } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8123";
 const STORAGE_KEY = "vero.api_key";
@@ -39,6 +39,33 @@ export async function fetchDashboard(mes: string, apiKey: string): Promise<Dashb
   }
   if (!response.ok) {
     throw new ApiError(response.status, "Não foi possível carregar os dados. Tente novamente.");
+  }
+
+  return response.json();
+}
+
+export async function updateParcelasPagas(
+  gastoId: number,
+  parcelasPagas: number,
+  apiKey: string,
+): Promise<GastoRecorrente> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/gastos-recorrentes/${gastoId}`, {
+      method: "PATCH",
+      headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ parcelas_pagas: parcelasPagas }),
+    });
+  } catch {
+    throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
+  }
+
+  if (response.status === 403) {
+    throw new ApiError(403, "Chave de acesso inválida.");
+  }
+  if (!response.ok) {
+    const corpo = await response.json().catch(() => null);
+    throw new ApiError(response.status, corpo?.detail ?? "Não foi possível salvar as parcelas.");
   }
 
   return response.json();

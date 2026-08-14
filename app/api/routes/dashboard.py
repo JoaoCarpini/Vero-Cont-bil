@@ -4,7 +4,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -33,8 +33,41 @@ def _serializar_datetime(dt: datetime) -> str:
     return dt.isoformat()
 
 
+def _serializar_gasto_recorrente(g: GastoRecorrente) -> dict:
+    return {
+        "id": g.id,
+        "descricao": g.descricao,
+        "valor_mensal": float(g.valor_mensal),
+        "categoria": g.categoria,
+        "parcelas_totais": g.parcelas_totais,
+        "parcelas_pagas": g.parcelas_pagas,
+        "ativo": g.ativo,
+    }
+
+
 class AtualizarSaldoAtualRequest(BaseModel):
     valor: float
+
+
+class AtualizarParcelasRequest(BaseModel):
+    parcelas_pagas: int = Field(ge=0)
+
+
+@router.patch("/gastos-recorrentes/{gasto_id}", dependencies=[Depends(verificar_api_key)])
+def atualizar_parcelas_pagas(gasto_id: int, payload: AtualizarParcelasRequest, db: Session = Depends(get_db)):
+    gasto = db.query(GastoRecorrente).filter(GastoRecorrente.id == gasto_id).first()
+    if gasto is None:
+        raise HTTPException(status_code=404, detail="Gasto recorrente não encontrado")
+    if gasto.parcelas_totais is None:
+        raise HTTPException(status_code=400, detail="Gasto recorrente indefinido não tem parcelas")
+    if payload.parcelas_pagas > gasto.parcelas_totais:
+        raise HTTPException(status_code=400, detail="parcelas_pagas não pode passar de parcelas_totais")
+
+    gasto.parcelas_pagas = payload.parcelas_pagas
+    db.commit()
+    db.refresh(gasto)
+
+    return _serializar_gasto_recorrente(gasto)
 
 
 @router.put("/saldo-atual", dependencies=[Depends(verificar_api_key)])
@@ -60,7 +93,8 @@ def obter_dashboard(
     mes: Optional[str] = Query(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
     db: Session = Depends(get_db),
 ):
-    mes_referencia = mes or datetime.now(TZ).strftime("%Y-%m")
+    mes_atual = datetime.now(TZ).strftime("%Y-%m")
+    mes_referencia = mes or mes_atual
 
     saldo = calcular_saldo_projetado(db, mes_referencia)
 
@@ -92,6 +126,9 @@ def obter_dashboard(
 
     return {
         "mes_referencia": mes_referencia,
+        # mes futuro (ainda nao chegou) => estimativa; mes atual/passado => ja tem
+        # movimentacao real lancada, entao o saldo calculado e um resultado, nao projecao.
+        "eh_projecao": mes_referencia > mes_atual,
         "saldo_atual": (
             {"valor": float(saldo_atual.valor), "atualizado_em": _serializar_datetime(saldo_atual.atualizado_em)}
             if saldo_atual
@@ -125,16 +162,5 @@ def obter_dashboard(
             {"forma_pagamento": forma or "não informado", "total": float(total)}
             for forma, total in por_forma_pagamento
         ],
-        "gastos_recorrentes": [
-            {
-                "id": g.id,
-                "descricao": g.descricao,
-                "valor_mensal": float(g.valor_mensal),
-                "categoria": g.categoria,
-                "parcelas_totais": g.parcelas_totais,
-                "parcelas_pagas": g.parcelas_pagas,
-                "ativo": g.ativo,
-            }
-            for g in gastos_recorrentes
-        ],
+        "gastos_recorrentes": [_serializar_gasto_recorrente(g) for g in gastos_recorrentes],
     }

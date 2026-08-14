@@ -1,12 +1,14 @@
 import { Infinity as InfinityIcon, Repeat } from "lucide-react";
 import type { GastoRecorrente } from "../types";
 import { formatCurrency } from "../lib/format";
+import { ParcelasEditor } from "./ParcelasEditor";
 
 interface Props {
   gastos: GastoRecorrente[];
+  onUpdateParcelas: (gastoId: number, parcelasPagas: number) => Promise<void>;
 }
 
-export function GastosRecorrentes({ gastos }: Props) {
+export function GastosRecorrentes({ gastos, onUpdateParcelas }: Props) {
   return (
     <div className="card recorrentes-card">
       <div className="card-header">
@@ -40,9 +42,12 @@ export function GastosRecorrentes({ gastos }: Props) {
                       <InfinityIcon size={12} strokeWidth={2} /> indefinido
                     </span>
                   ) : (
-                    <span>
-                      {g.parcelas_pagas}/{g.parcelas_totais} parcelas
-                    </span>
+                    <ParcelasEditor
+                      gastoId={g.id}
+                      parcelasPagas={g.parcelas_pagas ?? 0}
+                      parcelasTotais={parcelasTotais}
+                      onUpdate={onUpdateParcelas}
+                    />
                   )}
                 </div>
                 <div className="meter-track">

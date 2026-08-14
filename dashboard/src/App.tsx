@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { clearStoredApiKey, getStoredApiKey, setStoredApiKey, updateSaldoAtual } from "./api/client";
+import {
+  clearStoredApiKey,
+  getStoredApiKey,
+  setStoredApiKey,
+  updateParcelasPagas,
+  updateSaldoAtual,
+} from "./api/client";
 import { ApiKeyGate } from "./components/ApiKeyGate";
 import { DashboardView } from "./components/DashboardView";
 import { useDashboard } from "./hooks/useDashboard";
@@ -37,6 +43,12 @@ export default function App() {
     reload();
   }
 
+  async function handleUpdateParcelas(gastoId: number, parcelasPagas: number) {
+    if (!apiKey) return;
+    await updateParcelasPagas(gastoId, parcelasPagas, apiKey);
+    reload();
+  }
+
   if (!apiKey) {
     return <ApiKeyGate onSubmit={handleGateSubmit} errorMessage={gateError} />;
   }
@@ -51,6 +63,7 @@ export default function App() {
       onRetry={reload}
       onLogout={handleLogout}
       onSaveSaldoAtual={handleSaveSaldoAtual}
+      onUpdateParcelas={handleUpdateParcelas}
     />
   );
 }

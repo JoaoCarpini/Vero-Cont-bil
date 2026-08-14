@@ -1,4 +1,4 @@
-import { Check, Pencil, X } from "lucide-react";
+import { Check, Pencil, Wallet, X } from "lucide-react";
 import { useState } from "react";
 import type { SaldoAtual } from "../types";
 import { formatCurrency, formatRelativeTime } from "../lib/format";
@@ -41,41 +41,58 @@ export function SaldoAtualRow({ saldoAtual, onSave }: Props) {
   if (editing) {
     return (
       <div className="saldo-atual-row is-editing">
-        <span className="saldo-atual-label">Saldo atual</span>
-        <div className="saldo-atual-edit">
-          <span className="saldo-atual-prefix">R$</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") handleSave();
-              if (event.key === "Escape") setEditing(false);
-            }}
-            autoFocus
-            disabled={saving}
-          />
-          <button type="button" onClick={handleSave} disabled={saving} aria-label="Salvar">
-            <Check size={14} />
-          </button>
-          <button type="button" onClick={() => setEditing(false)} disabled={saving} aria-label="Cancelar">
-            <X size={14} />
-          </button>
+        <span className="saldo-atual-icon">
+          <Wallet size={14} strokeWidth={2} />
+        </span>
+        <div className="saldo-atual-edit-block">
+          <span className="saldo-atual-label">Saldo atual</span>
+          <div className="saldo-atual-edit">
+            <span className="saldo-atual-prefix">R$</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") handleSave();
+                if (event.key === "Escape") setEditing(false);
+              }}
+              autoFocus
+              disabled={saving}
+            />
+            <button type="button" onClick={handleSave} disabled={saving} aria-label="Salvar">
+              <Check size={14} />
+            </button>
+            <button type="button" onClick={() => setEditing(false)} disabled={saving} aria-label="Cancelar">
+              <X size={14} />
+            </button>
+          </div>
+          {error && <span className="saldo-atual-error">{error}</span>}
         </div>
-        {error && <span className="saldo-atual-error">{error}</span>}
       </div>
     );
   }
 
   return (
     <button type="button" className="saldo-atual-row" onClick={startEditing}>
-      <span className="saldo-atual-label">Saldo atual</span>
-      <span className="saldo-atual-value">
-        {saldoAtual ? formatCurrency(saldoAtual.valor) : "não informado"}
+      <span className="saldo-atual-icon">
+        <Wallet size={14} strokeWidth={2} />
       </span>
-      {saldoAtual && <span className="saldo-atual-time">{formatRelativeTime(saldoAtual.atualizado_em)}</span>}
-      <Pencil size={11} strokeWidth={2} className="saldo-atual-edit-icon" />
+      <span className="saldo-atual-text">
+        <span className="saldo-atual-label">Saldo atual</span>
+        <span className="saldo-atual-value-row">
+          <span className="saldo-atual-value">
+            {saldoAtual ? formatCurrency(saldoAtual.valor) : "Não informado"}
+          </span>
+          {saldoAtual && (
+            <>
+              <span className="saldo-atual-dot">·</span>
+              <span className="saldo-atual-time">{formatRelativeTime(saldoAtual.atualizado_em)}</span>
+            </>
+          )}
+        </span>
+      </span>
+      <Pencil size={12} strokeWidth={2} className="saldo-atual-edit-icon" />
     </button>
   );
 }

@@ -1,7 +1,7 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, LogOut, RefreshCw, Wallet, WifiOff } from "lucide-react";
 import type { DashboardStatus } from "../hooks/useDashboard";
 import { buildCategoriaSeries, buildFormaPagamentoSeries } from "../lib/distribution";
-import { currentMonth, formatMonthLabel, shiftMonth } from "../lib/format";
+import { formatMonthLabel, shiftMonth } from "../lib/format";
 import type { DashboardData } from "../types";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { DistribuicaoChart } from "./DistribuicaoChart";
@@ -18,6 +18,7 @@ interface Props {
   onRetry: () => void;
   onLogout: () => void;
   onSaveSaldoAtual: (valor: number) => Promise<void>;
+  onUpdateParcelas: (gastoId: number, parcelasPagas: number) => Promise<void>;
 }
 
 export function DashboardView({
@@ -29,9 +30,8 @@ export function DashboardView({
   onRetry,
   onLogout,
   onSaveSaldoAtual,
+  onUpdateParcelas,
 }: Props) {
-  const isCurrentMonth = mes === currentMonth();
-
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -47,12 +47,7 @@ export function DashboardView({
             <ChevronLeft size={18} />
           </button>
           <span className="month-label">{formatMonthLabel(mes)}</span>
-          <button
-            type="button"
-            aria-label="Próximo mês"
-            onClick={() => onChangeMes(shiftMonth(mes, 1))}
-            disabled={isCurrentMonth}
-          >
+          <button type="button" aria-label="Próximo mês" onClick={() => onChangeMes(shiftMonth(mes, 1))}>
             <ChevronRight size={18} />
           </button>
         </div>
@@ -87,6 +82,7 @@ export function DashboardView({
               saldoAtual={data.saldo_atual}
               onSaveSaldoAtual={onSaveSaldoAtual}
               mesLabel={formatMonthLabel(mes)}
+              ehProjecao={data.eh_projecao}
             />
 
             <section className="grid-charts">
@@ -102,7 +98,7 @@ export function DashboardView({
 
             <section className="grid-lists">
               <TransacoesList transacoes={data.transacoes} />
-              <GastosRecorrentes gastos={data.gastos_recorrentes} />
+              <GastosRecorrentes gastos={data.gastos_recorrentes} onUpdateParcelas={onUpdateParcelas} />
             </section>
           </div>
         )}
