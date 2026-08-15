@@ -33,6 +33,14 @@ export interface SaldoAtual {
   atualizado_em: string;
 }
 
+export interface NovoGastoRecorrentePayload {
+  descricao: string;
+  valor_mensal: number;
+  categoria: string;
+  parcelas_totais?: number | null;
+  parcelas_pagas?: number | null;
+}
+
 export interface DashboardData {
   mes_referencia: string;
   eh_projecao: boolean;

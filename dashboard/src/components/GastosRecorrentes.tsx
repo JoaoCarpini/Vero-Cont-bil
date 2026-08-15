@@ -1,14 +1,30 @@
-import { Infinity as InfinityIcon, Repeat } from "lucide-react";
-import type { GastoRecorrente } from "../types";
+import { Infinity as InfinityIcon, Repeat, X } from "lucide-react";
+import { useState } from "react";
+import type { GastoRecorrente, NovoGastoRecorrentePayload } from "../types";
 import { formatCurrency } from "../lib/format";
+import { NovoGastoRecorrenteForm } from "./NovoGastoRecorrenteForm";
 import { ParcelasEditor } from "./ParcelasEditor";
 
 interface Props {
   gastos: GastoRecorrente[];
   onUpdateParcelas: (gastoId: number, parcelasPagas: number) => Promise<void>;
+  onDeactivate: (gastoId: number) => Promise<void>;
+  onCreate: (payload: NovoGastoRecorrentePayload) => Promise<void>;
 }
 
-export function GastosRecorrentes({ gastos, onUpdateParcelas }: Props) {
+export function GastosRecorrentes({ gastos, onUpdateParcelas, onDeactivate, onCreate }: Props) {
+  const [removendoId, setRemovendoId] = useState<number | null>(null);
+
+  async function handleRemover(gasto: GastoRecorrente) {
+    if (!window.confirm(`Remover "${gasto.descricao}" dos gastos recorrentes ativos?`)) return;
+    setRemovendoId(gasto.id);
+    try {
+      await onDeactivate(gasto.id);
+    } finally {
+      setRemovendoId(null);
+    }
+  }
+
   return (
     <div className="card recorrentes-card">
       <div className="card-header">
@@ -33,7 +49,20 @@ export function GastosRecorrentes({ gastos, onUpdateParcelas }: Props) {
               <li key={g.id} className={`recorrente-item ${g.ativo ? "" : "is-inactive"}`}>
                 <div className="recorrente-top">
                   <span className="recorrente-descricao">{g.descricao}</span>
-                  <span className="recorrente-valor">{formatCurrency(g.valor_mensal)}/mês</span>
+                  <span className="recorrente-top-right">
+                    <span className="recorrente-valor">{formatCurrency(g.valor_mensal)}/mês</span>
+                    {g.ativo && (
+                      <button
+                        type="button"
+                        className="recorrente-remover"
+                        onClick={() => handleRemover(g)}
+                        disabled={removendoId === g.id}
+                        aria-label={`Remover ${g.descricao}`}
+                      >
+                        <X size={12} strokeWidth={2.25} />
+                      </button>
+                    )}
+                  </span>
                 </div>
                 <div className="recorrente-meta">
                   <span className="recorrente-categoria">{g.categoria}</span>
@@ -56,12 +85,14 @@ export function GastosRecorrentes({ gastos, onUpdateParcelas }: Props) {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                {!g.ativo && <span className="badge-inactive">Inativo</span>}
+                {!g.ativo && <span className="badge-inactive">Encerrado</span>}
               </li>
             );
           })}
         </ul>
       )}
+
+      <NovoGastoRecorrenteForm onCreate={onCreate} />
     </div>
   );
 }

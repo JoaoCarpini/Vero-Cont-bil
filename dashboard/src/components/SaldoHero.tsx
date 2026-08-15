@@ -9,12 +9,13 @@ interface Props {
   onSaveSaldoAtual: (valor: number) => Promise<void>;
   mesLabel: string;
   ehProjecao: boolean;
+  ehMesAtual: boolean;
 }
 
-export function SaldoHero({ saldo, saldoAtual, onSaveSaldoAtual, mesLabel, ehProjecao }: Props) {
+export function SaldoHero({ saldo, saldoAtual, onSaveSaldoAtual, mesLabel, ehProjecao, ehMesAtual }: Props) {
   const positivo = saldo.saldo_projetado >= 0;
   const diferenca = saldoAtual ? saldoAtual.valor - saldo.saldo_projetado : null;
-  const label = ehProjecao ? `Projeção para ${mesLabel}` : `Saldo do mês · ${mesLabel}`;
+  const label = ehProjecao ? `Projeção para ${mesLabel}` : ehMesAtual ? "Saldo atual" : `Saldo do mês · ${mesLabel}`;
 
   return (
     <section className="saldo-hero">

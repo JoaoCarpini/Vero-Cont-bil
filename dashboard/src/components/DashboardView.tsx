@@ -1,8 +1,8 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, LogOut, RefreshCw, Wallet, WifiOff } from "lucide-react";
 import type { DashboardStatus } from "../hooks/useDashboard";
 import { buildCategoriaSeries, buildFormaPagamentoSeries } from "../lib/distribution";
-import { formatMonthLabel, shiftMonth } from "../lib/format";
-import type { DashboardData } from "../types";
+import { currentMonth, formatMonthLabel, shiftMonth } from "../lib/format";
+import type { DashboardData, NovoGastoRecorrentePayload } from "../types";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { DistribuicaoChart } from "./DistribuicaoChart";
 import { GastosRecorrentes } from "./GastosRecorrentes";
@@ -19,6 +19,8 @@ interface Props {
   onLogout: () => void;
   onSaveSaldoAtual: (valor: number) => Promise<void>;
   onUpdateParcelas: (gastoId: number, parcelasPagas: number) => Promise<void>;
+  onDeactivateGasto: (gastoId: number) => Promise<void>;
+  onCreateGasto: (payload: NovoGastoRecorrentePayload) => Promise<void>;
 }
 
 export function DashboardView({
@@ -31,6 +33,8 @@ export function DashboardView({
   onLogout,
   onSaveSaldoAtual,
   onUpdateParcelas,
+  onDeactivateGasto,
+  onCreateGasto,
 }: Props) {
   return (
     <div className="app-shell">
@@ -83,6 +87,7 @@ export function DashboardView({
               onSaveSaldoAtual={onSaveSaldoAtual}
               mesLabel={formatMonthLabel(mes)}
               ehProjecao={data.eh_projecao}
+              ehMesAtual={mes === currentMonth()}
             />
 
             <section className="grid-charts">
@@ -98,7 +103,12 @@ export function DashboardView({
 
             <section className="grid-lists">
               <TransacoesList transacoes={data.transacoes} />
-              <GastosRecorrentes gastos={data.gastos_recorrentes} onUpdateParcelas={onUpdateParcelas} />
+              <GastosRecorrentes
+                gastos={data.gastos_recorrentes}
+                onUpdateParcelas={onUpdateParcelas}
+                onDeactivate={onDeactivateGasto}
+                onCreate={onCreateGasto}
+              />
             </section>
           </div>
         )}

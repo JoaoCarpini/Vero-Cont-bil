@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   clearStoredApiKey,
+  criarGastoRecorrente,
+  desativarGastoRecorrente,
   getStoredApiKey,
   setStoredApiKey,
   updateParcelasPagas,
@@ -10,6 +12,7 @@ import { ApiKeyGate } from "./components/ApiKeyGate";
 import { DashboardView } from "./components/DashboardView";
 import { useDashboard } from "./hooks/useDashboard";
 import { currentMonth } from "./lib/format";
+import type { NovoGastoRecorrentePayload } from "./types";
 
 export default function App() {
   const [apiKey, setApiKey] = useState<string | null>(() => getStoredApiKey());
@@ -49,6 +52,18 @@ export default function App() {
     reload();
   }
 
+  async function handleDeactivateGasto(gastoId: number) {
+    if (!apiKey) return;
+    await desativarGastoRecorrente(gastoId, apiKey);
+    reload();
+  }
+
+  async function handleCreateGasto(payload: NovoGastoRecorrentePayload) {
+    if (!apiKey) return;
+    await criarGastoRecorrente(payload, apiKey);
+    reload();
+  }
+
   if (!apiKey) {
     return <ApiKeyGate onSubmit={handleGateSubmit} errorMessage={gateError} />;
   }
@@ -64,6 +79,8 @@ export default function App() {
       onLogout={handleLogout}
       onSaveSaldoAtual={handleSaveSaldoAtual}
       onUpdateParcelas={handleUpdateParcelas}
+      onDeactivateGasto={handleDeactivateGasto}
+      onCreateGasto={handleCreateGasto}
     />
   );
 }

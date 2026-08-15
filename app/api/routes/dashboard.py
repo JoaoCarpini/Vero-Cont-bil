@@ -53,6 +53,35 @@ class AtualizarParcelasRequest(BaseModel):
     parcelas_pagas: int = Field(ge=0)
 
 
+class CriarGastoRecorrenteRequest(BaseModel):
+    descricao: str = Field(min_length=1)
+    valor_mensal: float = Field(gt=0)
+    categoria: str = Field(min_length=1)
+    parcelas_totais: Optional[int] = Field(default=None, ge=1)
+    parcelas_pagas: Optional[int] = Field(default=None, ge=0)
+
+
+@router.post("/gastos-recorrentes", status_code=201, dependencies=[Depends(verificar_api_key)])
+def criar_gasto_recorrente(payload: CriarGastoRecorrenteRequest, db: Session = Depends(get_db)):
+    if payload.parcelas_totais is not None:
+        if payload.parcelas_pagas is not None and payload.parcelas_pagas > payload.parcelas_totais:
+            raise HTTPException(status_code=400, detail="parcelas_pagas não pode passar de parcelas_totais")
+
+    gasto = GastoRecorrente(
+        descricao=payload.descricao.strip(),
+        valor_mensal=payload.valor_mensal,
+        categoria=payload.categoria.strip(),
+        parcelas_totais=payload.parcelas_totais,
+        parcelas_pagas=(payload.parcelas_pagas or 0) if payload.parcelas_totais is not None else None,
+        ativo=True,
+    )
+    db.add(gasto)
+    db.commit()
+    db.refresh(gasto)
+
+    return _serializar_gasto_recorrente(gasto)
+
+
 @router.patch("/gastos-recorrentes/{gasto_id}", dependencies=[Depends(verificar_api_key)])
 def atualizar_parcelas_pagas(gasto_id: int, payload: AtualizarParcelasRequest, db: Session = Depends(get_db)):
     gasto = db.query(GastoRecorrente).filter(GastoRecorrente.id == gasto_id).first()
@@ -64,6 +93,19 @@ def atualizar_parcelas_pagas(gasto_id: int, payload: AtualizarParcelasRequest, d
         raise HTTPException(status_code=400, detail="parcelas_pagas não pode passar de parcelas_totais")
 
     gasto.parcelas_pagas = payload.parcelas_pagas
+    db.commit()
+    db.refresh(gasto)
+
+    return _serializar_gasto_recorrente(gasto)
+
+
+@router.delete("/gastos-recorrentes/{gasto_id}", dependencies=[Depends(verificar_api_key)])
+def desativar_gasto_recorrente(gasto_id: int, db: Session = Depends(get_db)):
+    gasto = db.query(GastoRecorrente).filter(GastoRecorrente.id == gasto_id).first()
+    if gasto is None:
+        raise HTTPException(status_code=404, detail="Gasto recorrente não encontrado")
+
+    gasto.ativo = False
     db.commit()
     db.refresh(gasto)
 

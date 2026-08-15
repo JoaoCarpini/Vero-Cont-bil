@@ -15,7 +15,7 @@ app = FastAPI(title="Vero Contábil")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list(),
-    allow_methods=["GET", "POST", "PUT", "PATCH"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["X-Api-Key", "Content-Type"],
 )
 
