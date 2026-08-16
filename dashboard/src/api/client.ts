@@ -119,6 +119,26 @@ export async function desativarGastoRecorrente(gastoId: number, apiKey: string):
   return response.json();
 }
 
+export async function deletarTransacao(transacaoId: number, apiKey: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/transacoes/${transacaoId}`, {
+      method: "DELETE",
+      headers: { "X-Api-Key": apiKey },
+    });
+  } catch {
+    throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
+  }
+
+  if (response.status === 403) {
+    throw new ApiError(403, "Chave de acesso inválida.");
+  }
+  if (!response.ok) {
+    const corpo = await response.json().catch(() => null);
+    throw new ApiError(response.status, corpo?.detail ?? "Não foi possível remover a transação.");
+  }
+}
+
 export async function updateSaldoAtual(valor: number, apiKey: string): Promise<SaldoAtual> {
   let response: Response;
   try {

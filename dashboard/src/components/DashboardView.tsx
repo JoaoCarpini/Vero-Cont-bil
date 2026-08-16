@@ -5,13 +5,18 @@ import { currentMonth, formatMonthLabel, shiftMonth } from "../lib/format";
 import type { DashboardData, NovoGastoRecorrentePayload } from "../types";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { DistribuicaoChart } from "./DistribuicaoChart";
+import { Extrato } from "./Extrato";
 import { GastosRecorrentes } from "./GastosRecorrentes";
 import { SaldoHero } from "./SaldoHero";
 import { TransacoesList } from "./TransacoesList";
 
+type Tab = "dashboard" | "extrato";
+
 interface Props {
   mes: string;
   onChangeMes: (mes: string) => void;
+  tab: Tab;
+  onChangeTab: (tab: Tab) => void;
   status: DashboardStatus;
   data: DashboardData | null;
   errorMessage: string | null;
@@ -21,11 +26,14 @@ interface Props {
   onUpdateParcelas: (gastoId: number, parcelasPagas: number) => Promise<void>;
   onDeactivateGasto: (gastoId: number) => Promise<void>;
   onCreateGasto: (payload: NovoGastoRecorrentePayload) => Promise<void>;
+  onDeleteTransacao: (transacaoId: number) => Promise<void>;
 }
 
 export function DashboardView({
   mes,
   onChangeMes,
+  tab,
+  onChangeTab,
   status,
   data,
   errorMessage,
@@ -35,6 +43,7 @@ export function DashboardView({
   onUpdateParcelas,
   onDeactivateGasto,
   onCreateGasto,
+  onDeleteTransacao,
 }: Props) {
   return (
     <div className="app-shell">
@@ -67,6 +76,23 @@ export function DashboardView({
       </header>
 
       <main className="app-main">
+        <div className="tab-nav">
+          <button
+            type="button"
+            className={tab === "dashboard" ? "is-active" : ""}
+            onClick={() => onChangeTab("dashboard")}
+          >
+            Visão geral
+          </button>
+          <button
+            type="button"
+            className={tab === "extrato" ? "is-active" : ""}
+            onClick={() => onChangeTab("extrato")}
+          >
+            Extrato
+          </button>
+        </div>
+
         {status === "loading" && <DashboardSkeleton />}
 
         {status === "error" && (
@@ -79,7 +105,7 @@ export function DashboardView({
           </div>
         )}
 
-        {status === "success" && data && (
+        {status === "success" && data && tab === "dashboard" && (
           <div className="dashboard-grid">
             <SaldoHero
               saldo={data.saldo}
@@ -111,6 +137,10 @@ export function DashboardView({
               />
             </section>
           </div>
+        )}
+
+        {status === "success" && data && tab === "extrato" && (
+          <Extrato transacoes={data.transacoes} onDelete={onDeleteTransacao} />
         )}
       </main>
     </div>

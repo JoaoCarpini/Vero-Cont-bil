@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   clearStoredApiKey,
   criarGastoRecorrente,
+  deletarTransacao,
   desativarGastoRecorrente,
   getStoredApiKey,
   setStoredApiKey,
@@ -18,6 +19,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState<string | null>(() => getStoredApiKey());
   const [gateError, setGateError] = useState<string | null>(null);
   const [mes, setMes] = useState<string>(currentMonth());
+  const [tab, setTab] = useState<"dashboard" | "extrato">("dashboard");
 
   const { status, data, errorMessage, reload } = useDashboard(mes, apiKey);
 
@@ -64,6 +66,12 @@ export default function App() {
     reload();
   }
 
+  async function handleDeleteTransacao(transacaoId: number) {
+    if (!apiKey) return;
+    await deletarTransacao(transacaoId, apiKey);
+    reload();
+  }
+
   if (!apiKey) {
     return <ApiKeyGate onSubmit={handleGateSubmit} errorMessage={gateError} />;
   }
@@ -72,6 +80,8 @@ export default function App() {
     <DashboardView
       mes={mes}
       onChangeMes={setMes}
+      tab={tab}
+      onChangeTab={setTab}
       status={status}
       data={data}
       errorMessage={errorMessage}
@@ -81,6 +91,7 @@ export default function App() {
       onUpdateParcelas={handleUpdateParcelas}
       onDeactivateGasto={handleDeactivateGasto}
       onCreateGasto={handleCreateGasto}
+      onDeleteTransacao={handleDeleteTransacao}
     />
   );
 }

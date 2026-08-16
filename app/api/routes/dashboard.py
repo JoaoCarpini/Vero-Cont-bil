@@ -130,6 +130,16 @@ def atualizar_saldo_atual(payload: AtualizarSaldoAtualRequest, db: Session = Dep
     return {"valor": float(registro.valor), "atualizado_em": _serializar_datetime(registro.atualizado_em)}
 
 
+@router.delete("/transacoes/{transacao_id}", status_code=204, dependencies=[Depends(verificar_api_key)])
+def deletar_transacao(transacao_id: int, db: Session = Depends(get_db)):
+    transacao = db.query(Transacao).filter(Transacao.id == transacao_id).first()
+    if transacao is None:
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+
+    db.delete(transacao)
+    db.commit()
+
+
 @router.get("/dashboard", dependencies=[Depends(verificar_api_key)])
 def obter_dashboard(
     mes: Optional[str] = Query(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),

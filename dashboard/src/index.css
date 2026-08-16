@@ -318,6 +318,39 @@ svg {
   padding: 16px 20px 40px;
 }
 
+.tab-nav {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  background: var(--page);
+  border: 1px solid var(--border);
+}
+
+.tab-nav button {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 620;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tab-nav button:hover:not(.is-active) {
+  color: var(--text-primary);
+}
+
+.tab-nav button.is-active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(11, 11, 11, 0.08);
+}
+
 .dashboard-grid {
   display: flex;
   flex-direction: column;
@@ -841,6 +874,39 @@ svg {
 
 .transacao-valor.is-good {
   color: var(--good-text);
+}
+
+.extrato-list {
+  max-height: none;
+}
+
+.extrato-row {
+  gap: 8px;
+}
+
+.transacao-remover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.transacao-remover:hover:not(:disabled) {
+  background: var(--critical-soft);
+  color: var(--critical);
+}
+
+.transacao-remover:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .transacao-data {
