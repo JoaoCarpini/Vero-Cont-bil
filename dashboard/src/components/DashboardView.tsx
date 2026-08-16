@@ -22,7 +22,7 @@ interface Props {
   errorMessage: string | null;
   onRetry: () => void;
   onLogout: () => void;
-  onSaveSaldoAtual: (valor: number) => Promise<void>;
+  onSaveAjusteSaldo: (valor: number) => Promise<void>;
   onUpdateParcelas: (gastoId: number, parcelasPagas: number) => Promise<void>;
   onDeactivateGasto: (gastoId: number) => Promise<void>;
   onCreateGasto: (payload: NovoGastoRecorrentePayload) => Promise<void>;
@@ -39,7 +39,7 @@ export function DashboardView({
   errorMessage,
   onRetry,
   onLogout,
-  onSaveSaldoAtual,
+  onSaveAjusteSaldo,
   onUpdateParcelas,
   onDeactivateGasto,
   onCreateGasto,
@@ -109,8 +109,7 @@ export function DashboardView({
           <div className="dashboard-grid">
             <SaldoHero
               saldo={data.saldo}
-              saldoAtual={data.saldo_atual}
-              onSaveSaldoAtual={onSaveSaldoAtual}
+              onSaveAjusteSaldo={onSaveAjusteSaldo}
               mesLabel={formatMonthLabel(mes)}
               ehProjecao={data.eh_projecao}
               ehMesAtual={mes === currentMonth()}

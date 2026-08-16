@@ -6,8 +6,8 @@ import {
   desativarGastoRecorrente,
   getStoredApiKey,
   setStoredApiKey,
+  updateAjusteSaldo,
   updateParcelasPagas,
-  updateSaldoAtual,
 } from "./api/client";
 import { ApiKeyGate } from "./components/ApiKeyGate";
 import { DashboardView } from "./components/DashboardView";
@@ -42,9 +42,9 @@ export default function App() {
     setApiKey(null);
   }
 
-  async function handleSaveSaldoAtual(valor: number) {
+  async function handleSaveAjusteSaldo(valor: number) {
     if (!apiKey) return;
-    await updateSaldoAtual(valor, apiKey);
+    await updateAjusteSaldo(mes, valor, apiKey);
     reload();
   }
 
@@ -87,7 +87,7 @@ export default function App() {
       errorMessage={errorMessage}
       onRetry={reload}
       onLogout={handleLogout}
-      onSaveSaldoAtual={handleSaveSaldoAtual}
+      onSaveAjusteSaldo={handleSaveAjusteSaldo}
       onUpdateParcelas={handleUpdateParcelas}
       onDeactivateGasto={handleDeactivateGasto}
       onCreateGasto={handleCreateGasto}

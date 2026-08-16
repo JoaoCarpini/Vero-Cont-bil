@@ -4,6 +4,8 @@ export interface Saldo {
   saidas_lancadas: number;
   gastos_recorrentes: number;
   saldo_projetado: number;
+  ajuste_manual: number;
+  saldo_final: number;
 }
 
 export interface Transacao {
@@ -28,11 +30,6 @@ export interface GastoRecorrente {
   ativo: boolean;
 }
 
-export interface SaldoAtual {
-  valor: number;
-  atualizado_em: string;
-}
-
 export interface NovoGastoRecorrentePayload {
   descricao: string;
   valor_mensal: number;
@@ -44,7 +41,6 @@ export interface NovoGastoRecorrentePayload {
 export interface DashboardData {
   mes_referencia: string;
   eh_projecao: boolean;
-  saldo_atual: SaldoAtual | null;
   saldo: Saldo;
   transacoes: Transacao[];
   distribuicao_categoria: { categoria: string; total: number }[];

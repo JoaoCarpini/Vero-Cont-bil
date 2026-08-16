@@ -1,4 +1,4 @@
-import type { DashboardData, GastoRecorrente, NovoGastoRecorrentePayload, SaldoAtual } from "../types";
+import type { DashboardData, GastoRecorrente, NovoGastoRecorrentePayload } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8123";
 const STORAGE_KEY = "vero.api_key";
@@ -139,10 +139,10 @@ export async function deletarTransacao(transacaoId: number, apiKey: string): Pro
   }
 }
 
-export async function updateSaldoAtual(valor: number, apiKey: string): Promise<SaldoAtual> {
+export async function updateAjusteSaldo(mes: string, valor: number, apiKey: string): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/api/saldo-atual`, {
+    response = await fetch(`${API_BASE_URL}/api/ajuste-saldo?mes=${mes}`, {
       method: "PUT",
       headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ valor }),
@@ -155,8 +155,6 @@ export async function updateSaldoAtual(valor: number, apiKey: string): Promise<S
     throw new ApiError(403, "Chave de acesso inválida.");
   }
   if (!response.ok) {
-    throw new ApiError(response.status, "Não foi possível salvar o saldo atual.");
+    throw new ApiError(response.status, "Não foi possível salvar o ajuste de saldo.");
   }
-
-  return response.json();
 }

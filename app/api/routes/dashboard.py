@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.database import get_db
+from app.models.ajuste_saldo import AjusteSaldoManual
 from app.models.gasto_recorrente import GastoRecorrente
-from app.models.saldo_atual import SaldoAtual
 from app.models.transacao import Transacao
 from app.services.financeiro import calcular_saldo_projetado
 
@@ -45,7 +45,7 @@ def _serializar_gasto_recorrente(g: GastoRecorrente) -> dict:
     }
 
 
-class AtualizarSaldoAtualRequest(BaseModel):
+class AtualizarAjusteSaldoRequest(BaseModel):
     valor: float
 
 
@@ -112,13 +112,25 @@ def desativar_gasto_recorrente(gasto_id: int, db: Session = Depends(get_db)):
     return _serializar_gasto_recorrente(gasto)
 
 
-@router.put("/saldo-atual", dependencies=[Depends(verificar_api_key)])
-def atualizar_saldo_atual(payload: AtualizarSaldoAtualRequest, db: Session = Depends(get_db)):
-    registro = db.query(SaldoAtual).first()
-    agora = datetime.now(TZ)
+@router.put("/ajuste-saldo", dependencies=[Depends(verificar_api_key)])
+def atualizar_ajuste_saldo(
+    payload: AtualizarAjusteSaldoRequest,
+    mes: str = Query(..., pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    db: Session = Depends(get_db),
+):
+    registro = db.query(AjusteSaldoManual).filter(AjusteSaldoManual.mes_referencia == mes).first()
 
+    # ajuste zero equivale a "sem correção manual" nesse mês, então removemos o registro
+    # em vez de guardar um ajuste de valor 0.
+    if abs(payload.valor) < 0.005:
+        if registro is not None:
+            db.delete(registro)
+            db.commit()
+        return {"mes_referencia": mes, "valor": 0.0, "atualizado_em": None}
+
+    agora = datetime.now(TZ)
     if registro is None:
-        registro = SaldoAtual(valor=payload.valor, atualizado_em=agora)
+        registro = AjusteSaldoManual(mes_referencia=mes, valor=payload.valor, atualizado_em=agora)
         db.add(registro)
     else:
         registro.valor = payload.valor
@@ -127,7 +139,11 @@ def atualizar_saldo_atual(payload: AtualizarSaldoAtualRequest, db: Session = Dep
     db.commit()
     db.refresh(registro)
 
-    return {"valor": float(registro.valor), "atualizado_em": _serializar_datetime(registro.atualizado_em)}
+    return {
+        "mes_referencia": mes,
+        "valor": float(registro.valor),
+        "atualizado_em": _serializar_datetime(registro.atualizado_em),
+    }
 
 
 @router.delete("/transacoes/{transacao_id}", status_code=204, dependencies=[Depends(verificar_api_key)])
@@ -174,24 +190,24 @@ def obter_dashboard(
     )
 
     gastos_recorrentes = db.query(GastoRecorrente).order_by(GastoRecorrente.id).all()
-    saldo_atual = db.query(SaldoAtual).first()
+
+    ajuste = db.query(AjusteSaldoManual).filter(AjusteSaldoManual.mes_referencia == mes_referencia).first()
+    ajuste_valor = float(ajuste.valor) if ajuste else 0.0
+    saldo_projetado = float(saldo["saldo_projetado"])
 
     return {
         "mes_referencia": mes_referencia,
         # mes futuro (ainda nao chegou) => estimativa; mes atual/passado => ja tem
         # movimentacao real lancada, entao o saldo calculado e um resultado, nao projecao.
         "eh_projecao": mes_referencia > mes_atual,
-        "saldo_atual": (
-            {"valor": float(saldo_atual.valor), "atualizado_em": _serializar_datetime(saldo_atual.atualizado_em)}
-            if saldo_atual
-            else None
-        ),
         "saldo": {
             "salario_base": float(saldo["salario_base"]),
             "entradas_lancadas": float(saldo["entradas_lancadas"]),
             "saidas_lancadas": float(saldo["saidas_lancadas"]),
             "gastos_recorrentes": float(saldo["gastos_recorrentes"]),
-            "saldo_projetado": float(saldo["saldo_projetado"]),
+            "saldo_projetado": saldo_projetado,
+            "ajuste_manual": ajuste_valor,
+            "saldo_final": saldo_projetado + ajuste_valor,
         },
         "transacoes": [
             {
