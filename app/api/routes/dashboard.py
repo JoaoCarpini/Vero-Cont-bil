@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -121,10 +121,16 @@ def atualizar_parcelas_pagas(gasto_id: int, payload: AtualizarParcelasRequest, d
 
 
 @router.delete("/gastos-recorrentes/{gasto_id}", dependencies=[Depends(verificar_jwt)])
-def desativar_gasto_recorrente(gasto_id: int, db: Session = Depends(get_db)):
+def desativar_gasto_recorrente(gasto_id: int, response: Response, db: Session = Depends(get_db)):
     gasto = db.query(GastoRecorrente).filter(GastoRecorrente.id == gasto_id).first()
     if gasto is None:
         raise HTTPException(status_code=404, detail="Gasto recorrente não encontrado")
+
+    if not gasto.ativo:
+        db.delete(gasto)
+        db.commit()
+        response.status_code = 204
+        return None
 
     gasto.ativo = False
     db.commit()

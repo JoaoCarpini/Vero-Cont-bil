@@ -119,7 +119,7 @@ export async function criarGastoRecorrente(
   return response.json();
 }
 
-export async function desativarGastoRecorrente(gastoId: number, token: string): Promise<GastoRecorrente> {
+export async function desativarGastoRecorrente(gastoId: number, token: string): Promise<void> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/gastos-recorrentes/${gastoId}`, {
@@ -137,8 +137,6 @@ export async function desativarGastoRecorrente(gastoId: number, token: string): 
     const corpo = await response.json().catch(() => null);
     throw new ApiError(response.status, corpo?.detail ?? "Não foi possível remover o gasto recorrente.");
   }
-
-  return response.json();
 }
 
 export async function deletarTransacao(transacaoId: number, token: string): Promise<void> {

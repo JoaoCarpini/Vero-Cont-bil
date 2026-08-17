@@ -16,7 +16,10 @@ export function GastosRecorrentes({ gastos, onUpdateParcelas, onDeactivate, onCr
   const [removendoId, setRemovendoId] = useState<number | null>(null);
 
   async function handleRemover(gasto: GastoRecorrente) {
-    if (!window.confirm(`Remover "${gasto.descricao}" dos gastos recorrentes ativos?`)) return;
+    const mensagem = gasto.ativo
+      ? `Remover "${gasto.descricao}" dos gastos recorrentes ativos?`
+      : `Excluir "${gasto.descricao}" permanentemente?`;
+    if (!window.confirm(mensagem)) return;
     setRemovendoId(gasto.id);
     try {
       await onDeactivate(gasto.id);
@@ -51,17 +54,15 @@ export function GastosRecorrentes({ gastos, onUpdateParcelas, onDeactivate, onCr
                   <span className="recorrente-descricao">{g.descricao}</span>
                   <span className="recorrente-top-right">
                     <span className="recorrente-valor">{formatCurrency(g.valor_mensal)}/mês</span>
-                    {g.ativo && (
-                      <button
-                        type="button"
-                        className="recorrente-remover"
-                        onClick={() => handleRemover(g)}
-                        disabled={removendoId === g.id}
-                        aria-label={`Remover ${g.descricao}`}
-                      >
-                        <X size={12} strokeWidth={2.25} />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="recorrente-remover"
+                      onClick={() => handleRemover(g)}
+                      disabled={removendoId === g.id}
+                      aria-label={`Remover ${g.descricao}`}
+                    >
+                      <X size={12} strokeWidth={2.25} />
+                    </button>
                   </span>
                 </div>
                 <div className="recorrente-meta">
