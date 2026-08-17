@@ -1,7 +1,7 @@
 import type { DashboardData, GastoRecorrente, NovoGastoRecorrentePayload } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8123";
-const STORAGE_KEY = "vero.api_key";
+const STORAGE_KEY = "vero.jwt";
 
 export class ApiError extends Error {
   status: number;
@@ -12,30 +12,52 @@ export class ApiError extends Error {
   }
 }
 
-export function getStoredApiKey(): string | null {
+export function getStoredToken(): string | null {
   return localStorage.getItem(STORAGE_KEY);
 }
 
-export function setStoredApiKey(key: string): void {
-  localStorage.setItem(STORAGE_KEY, key);
+export function setStoredToken(token: string): void {
+  localStorage.setItem(STORAGE_KEY, token);
 }
 
-export function clearStoredApiKey(): void {
+export function clearStoredToken(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-export async function fetchDashboard(mes: string, apiKey: string): Promise<DashboardData> {
+export async function login(apiKey: string): Promise<{ token: string; expires_in: number }> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/api/dashboard?mes=${mes}`, {
-      headers: { "X-Api-Key": apiKey },
+    response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ api_key: apiKey }),
     });
   } catch {
     throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
   }
 
-  if (response.status === 403) {
-    throw new ApiError(403, "Chave de acesso inválida.");
+  if (response.status === 401) {
+    throw new ApiError(401, "Chave de acesso inválida.");
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, "Não foi possível entrar. Tente novamente.");
+  }
+
+  return response.json();
+}
+
+export async function fetchDashboard(mes: string, token: string): Promise<DashboardData> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/dashboard?mes=${mes}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
+  }
+
+  if (response.status === 401) {
+    throw new ApiError(401, "Sessão expirada. Faça login novamente.");
   }
   if (!response.ok) {
     throw new ApiError(response.status, "Não foi possível carregar os dados. Tente novamente.");
@@ -47,21 +69,21 @@ export async function fetchDashboard(mes: string, apiKey: string): Promise<Dashb
 export async function updateParcelasPagas(
   gastoId: number,
   parcelasPagas: number,
-  apiKey: string,
+  token: string,
 ): Promise<GastoRecorrente> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/gastos-recorrentes/${gastoId}`, {
       method: "PATCH",
-      headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ parcelas_pagas: parcelasPagas }),
     });
   } catch {
     throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
   }
 
-  if (response.status === 403) {
-    throw new ApiError(403, "Chave de acesso inválida.");
+  if (response.status === 401) {
+    throw new ApiError(401, "Sessão expirada. Faça login novamente.");
   }
   if (!response.ok) {
     const corpo = await response.json().catch(() => null);
@@ -73,21 +95,21 @@ export async function updateParcelasPagas(
 
 export async function criarGastoRecorrente(
   payload: NovoGastoRecorrentePayload,
-  apiKey: string,
+  token: string,
 ): Promise<GastoRecorrente> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/gastos-recorrentes`, {
       method: "POST",
-      headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
   } catch {
     throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
   }
 
-  if (response.status === 403) {
-    throw new ApiError(403, "Chave de acesso inválida.");
+  if (response.status === 401) {
+    throw new ApiError(401, "Sessão expirada. Faça login novamente.");
   }
   if (!response.ok) {
     const corpo = await response.json().catch(() => null);
@@ -97,19 +119,19 @@ export async function criarGastoRecorrente(
   return response.json();
 }
 
-export async function desativarGastoRecorrente(gastoId: number, apiKey: string): Promise<GastoRecorrente> {
+export async function desativarGastoRecorrente(gastoId: number, token: string): Promise<GastoRecorrente> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/gastos-recorrentes/${gastoId}`, {
       method: "DELETE",
-      headers: { "X-Api-Key": apiKey },
+      headers: { Authorization: `Bearer ${token}` },
     });
   } catch {
     throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
   }
 
-  if (response.status === 403) {
-    throw new ApiError(403, "Chave de acesso inválida.");
+  if (response.status === 401) {
+    throw new ApiError(401, "Sessão expirada. Faça login novamente.");
   }
   if (!response.ok) {
     const corpo = await response.json().catch(() => null);
@@ -119,19 +141,19 @@ export async function desativarGastoRecorrente(gastoId: number, apiKey: string):
   return response.json();
 }
 
-export async function deletarTransacao(transacaoId: number, apiKey: string): Promise<void> {
+export async function deletarTransacao(transacaoId: number, token: string): Promise<void> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/transacoes/${transacaoId}`, {
       method: "DELETE",
-      headers: { "X-Api-Key": apiKey },
+      headers: { Authorization: `Bearer ${token}` },
     });
   } catch {
     throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
   }
 
-  if (response.status === 403) {
-    throw new ApiError(403, "Chave de acesso inválida.");
+  if (response.status === 401) {
+    throw new ApiError(401, "Sessão expirada. Faça login novamente.");
   }
   if (!response.ok) {
     const corpo = await response.json().catch(() => null);
@@ -139,20 +161,20 @@ export async function deletarTransacao(transacaoId: number, apiKey: string): Pro
   }
 }
 
-export async function updateAjusteSaldo(mes: string, valor: number, apiKey: string): Promise<void> {
+export async function updateAjusteSaldo(mes: string, valor: number, token: string): Promise<void> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/ajuste-saldo?mes=${mes}`, {
       method: "PUT",
-      headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ valor }),
     });
   } catch {
     throw new ApiError(0, "Não foi possível conectar à API. Verifique sua conexão.");
   }
 
-  if (response.status === 403) {
-    throw new ApiError(403, "Chave de acesso inválida.");
+  if (response.status === 401) {
+    throw new ApiError(401, "Sessão expirada. Faça login novamente.");
   }
   if (!response.ok) {
     throw new ApiError(response.status, "Não foi possível salvar o ajuste de saldo.");

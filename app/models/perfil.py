@@ -10,3 +10,4 @@ class Perfil(Base):
     salario_base_30_dias = Column(Numeric(10, 2), nullable=True)
     salario_base_31_dias = Column(Numeric(10, 2), nullable=True)
     dia_recebimento = Column(Integer, nullable=True)  # dia do mês, 1-31
+    dia_fechamento_fatura = Column(Integer, nullable=True)  # dia do mês em que a fatura do crédito fecha, 1-31

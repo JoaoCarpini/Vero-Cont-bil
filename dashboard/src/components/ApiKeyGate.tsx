@@ -4,15 +4,16 @@ import { AlertCircle, KeyRound, Wallet } from "lucide-react";
 interface Props {
   onSubmit: (key: string) => void;
   errorMessage: string | null;
+  loading?: boolean;
 }
 
-export function ApiKeyGate({ onSubmit, errorMessage }: Props) {
+export function ApiKeyGate({ onSubmit, errorMessage, loading = false }: Props) {
   const [value, setValue] = useState("");
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const trimmed = value.trim();
-    if (trimmed) onSubmit(trimmed);
+    if (trimmed && !loading) onSubmit(trimmed);
   }
 
   return (
@@ -33,6 +34,7 @@ export function ApiKeyGate({ onSubmit, errorMessage }: Props) {
             onChange={(event) => setValue(event.target.value)}
             autoFocus
             autoComplete="off"
+            disabled={loading}
           />
         </label>
 
@@ -43,8 +45,8 @@ export function ApiKeyGate({ onSubmit, errorMessage }: Props) {
           </div>
         )}
 
-        <button type="submit" disabled={!value.trim()}>
-          Entrar
+        <button type="submit" disabled={!value.trim() || loading}>
+          {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
     </div>

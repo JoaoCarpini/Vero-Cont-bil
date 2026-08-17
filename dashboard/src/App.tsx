@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import {
-  clearStoredApiKey,
+  ApiError,
+  clearStoredToken,
   criarGastoRecorrente,
   deletarTransacao,
   desativarGastoRecorrente,
-  getStoredApiKey,
-  setStoredApiKey,
+  getStoredToken,
+  login,
+  setStoredToken,
   updateAjusteSaldo,
   updateParcelasPagas,
 } from "./api/client";
@@ -16,64 +18,73 @@ import { currentMonth } from "./lib/format";
 import type { NovoGastoRecorrentePayload } from "./types";
 
 export default function App() {
-  const [apiKey, setApiKey] = useState<string | null>(() => getStoredApiKey());
+  const [token, setToken] = useState<string | null>(() => getStoredToken());
   const [gateError, setGateError] = useState<string | null>(null);
+  const [gateLoading, setGateLoading] = useState(false);
   const [mes, setMes] = useState<string>(currentMonth());
   const [tab, setTab] = useState<"dashboard" | "extrato">("dashboard");
 
-  const { status, data, errorMessage, reload } = useDashboard(mes, apiKey);
+  const { status, data, errorMessage, reload } = useDashboard(mes, token);
 
   useEffect(() => {
     if (status === "unauthorized") {
-      clearStoredApiKey();
-      setGateError(errorMessage ?? "Chave de acesso inválida.");
-      setApiKey(null);
+      clearStoredToken();
+      setGateError(errorMessage ?? "Sessão expirada. Faça login novamente.");
+      setToken(null);
     }
   }, [status, errorMessage]);
 
-  function handleGateSubmit(key: string) {
+  async function handleGateSubmit(apiKey: string) {
     setGateError(null);
-    setStoredApiKey(key);
-    setApiKey(key);
+    setGateLoading(true);
+    try {
+      const { token: novoToken } = await login(apiKey);
+      setStoredToken(novoToken);
+      setToken(novoToken);
+    } catch (err) {
+      setGateError(err instanceof ApiError ? err.message : "Não foi possível entrar. Tente novamente.");
+    } finally {
+      setGateLoading(false);
+    }
   }
 
   function handleLogout() {
-    clearStoredApiKey();
-    setApiKey(null);
+    clearStoredToken();
+    setToken(null);
   }
 
   async function handleSaveAjusteSaldo(valor: number) {
-    if (!apiKey) return;
-    await updateAjusteSaldo(mes, valor, apiKey);
+    if (!token) return;
+    await updateAjusteSaldo(mes, valor, token);
     reload();
   }
 
   async function handleUpdateParcelas(gastoId: number, parcelasPagas: number) {
-    if (!apiKey) return;
-    await updateParcelasPagas(gastoId, parcelasPagas, apiKey);
+    if (!token) return;
+    await updateParcelasPagas(gastoId, parcelasPagas, token);
     reload();
   }
 
   async function handleDeactivateGasto(gastoId: number) {
-    if (!apiKey) return;
-    await desativarGastoRecorrente(gastoId, apiKey);
+    if (!token) return;
+    await desativarGastoRecorrente(gastoId, token);
     reload();
   }
 
   async function handleCreateGasto(payload: NovoGastoRecorrentePayload) {
-    if (!apiKey) return;
-    await criarGastoRecorrente(payload, apiKey);
+    if (!token) return;
+    await criarGastoRecorrente(payload, token);
     reload();
   }
 
   async function handleDeleteTransacao(transacaoId: number) {
-    if (!apiKey) return;
-    await deletarTransacao(transacaoId, apiKey);
+    if (!token) return;
+    await deletarTransacao(transacaoId, token);
     reload();
   }
 
-  if (!apiKey) {
-    return <ApiKeyGate onSubmit={handleGateSubmit} errorMessage={gateError} />;
+  if (!token) {
+    return <ApiKeyGate onSubmit={handleGateSubmit} errorMessage={gateError} loading={gateLoading} />;
   }
 
   return (

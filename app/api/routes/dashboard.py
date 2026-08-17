@@ -1,28 +1,23 @@
-import secrets
 from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
-from app.core.config import settings
+from app.core.auth import verificar_jwt
 from app.db.database import get_db
 from app.models.ajuste_saldo import AjusteSaldoManual
 from app.models.gasto_recorrente import GastoRecorrente
+from app.models.perfil import Perfil
 from app.models.transacao import Transacao
 from app.services.financeiro import calcular_saldo_projetado
 
 router = APIRouter()
 
 TZ = ZoneInfo("America/Sao_Paulo")
-
-
-def verificar_api_key(x_api_key: str = Header(default="")) -> None:
-    if not secrets.compare_digest(x_api_key, settings.DASHBOARD_API_KEY):
-        raise HTTPException(status_code=403, detail="API key inválida")
 
 
 def _serializar_datetime(dt: datetime) -> str:
@@ -45,6 +40,10 @@ def _serializar_gasto_recorrente(g: GastoRecorrente) -> dict:
     }
 
 
+class AtualizarPerfilRequest(BaseModel):
+    dia_fechamento_fatura: Optional[int] = Field(default=None, ge=1, le=31)
+
+
 class AtualizarAjusteSaldoRequest(BaseModel):
     valor: float
 
@@ -61,7 +60,29 @@ class CriarGastoRecorrenteRequest(BaseModel):
     parcelas_pagas: Optional[int] = Field(default=None, ge=0)
 
 
-@router.post("/gastos-recorrentes", status_code=201, dependencies=[Depends(verificar_api_key)])
+@router.get("/perfil", dependencies=[Depends(verificar_jwt)])
+def obter_perfil(db: Session = Depends(get_db)):
+    perfil = db.query(Perfil).first()
+    if perfil is None:
+        raise HTTPException(status_code=404, detail="Perfil não encontrado")
+
+    return {"dia_fechamento_fatura": perfil.dia_fechamento_fatura}
+
+
+@router.patch("/perfil", dependencies=[Depends(verificar_jwt)])
+def atualizar_perfil(payload: AtualizarPerfilRequest, db: Session = Depends(get_db)):
+    perfil = db.query(Perfil).first()
+    if perfil is None:
+        raise HTTPException(status_code=404, detail="Perfil não encontrado")
+
+    perfil.dia_fechamento_fatura = payload.dia_fechamento_fatura
+    db.commit()
+    db.refresh(perfil)
+
+    return {"dia_fechamento_fatura": perfil.dia_fechamento_fatura}
+
+
+@router.post("/gastos-recorrentes", status_code=201, dependencies=[Depends(verificar_jwt)])
 def criar_gasto_recorrente(payload: CriarGastoRecorrenteRequest, db: Session = Depends(get_db)):
     if payload.parcelas_totais is not None:
         if payload.parcelas_pagas is not None and payload.parcelas_pagas > payload.parcelas_totais:
@@ -82,7 +103,7 @@ def criar_gasto_recorrente(payload: CriarGastoRecorrenteRequest, db: Session = D
     return _serializar_gasto_recorrente(gasto)
 
 
-@router.patch("/gastos-recorrentes/{gasto_id}", dependencies=[Depends(verificar_api_key)])
+@router.patch("/gastos-recorrentes/{gasto_id}", dependencies=[Depends(verificar_jwt)])
 def atualizar_parcelas_pagas(gasto_id: int, payload: AtualizarParcelasRequest, db: Session = Depends(get_db)):
     gasto = db.query(GastoRecorrente).filter(GastoRecorrente.id == gasto_id).first()
     if gasto is None:
@@ -99,7 +120,7 @@ def atualizar_parcelas_pagas(gasto_id: int, payload: AtualizarParcelasRequest, d
     return _serializar_gasto_recorrente(gasto)
 
 
-@router.delete("/gastos-recorrentes/{gasto_id}", dependencies=[Depends(verificar_api_key)])
+@router.delete("/gastos-recorrentes/{gasto_id}", dependencies=[Depends(verificar_jwt)])
 def desativar_gasto_recorrente(gasto_id: int, db: Session = Depends(get_db)):
     gasto = db.query(GastoRecorrente).filter(GastoRecorrente.id == gasto_id).first()
     if gasto is None:
@@ -112,7 +133,7 @@ def desativar_gasto_recorrente(gasto_id: int, db: Session = Depends(get_db)):
     return _serializar_gasto_recorrente(gasto)
 
 
-@router.put("/ajuste-saldo", dependencies=[Depends(verificar_api_key)])
+@router.put("/ajuste-saldo", dependencies=[Depends(verificar_jwt)])
 def atualizar_ajuste_saldo(
     payload: AtualizarAjusteSaldoRequest,
     mes: str = Query(..., pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
@@ -146,7 +167,7 @@ def atualizar_ajuste_saldo(
     }
 
 
-@router.delete("/transacoes/{transacao_id}", status_code=204, dependencies=[Depends(verificar_api_key)])
+@router.delete("/transacoes/{transacao_id}", status_code=204, dependencies=[Depends(verificar_jwt)])
 def deletar_transacao(transacao_id: int, db: Session = Depends(get_db)):
     transacao = db.query(Transacao).filter(Transacao.id == transacao_id).first()
     if transacao is None:
@@ -156,7 +177,7 @@ def deletar_transacao(transacao_id: int, db: Session = Depends(get_db)):
     db.commit()
 
 
-@router.get("/dashboard", dependencies=[Depends(verificar_api_key)])
+@router.get("/dashboard", dependencies=[Depends(verificar_jwt)])
 def obter_dashboard(
     mes: Optional[str] = Query(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
     db: Session = Depends(get_db),

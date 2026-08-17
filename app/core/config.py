@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     IMPORT_API_KEY: str
 
     DASHBOARD_API_KEY: str
+    JWT_SECRET_KEY: str
+    JWT_EXPIRATION_HOURS: int = 24
     CORS_ORIGINS: str = "http://localhost:5173"
 
     class Config:

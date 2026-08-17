@@ -8,3 +8,4 @@ anthropic
 httpx
 tzdata
 python-multipart
+pyjwt

@@ -35,11 +35,16 @@ def ensure_schema() -> None:
 
     if "perfil" in inspector.get_table_names():
         colunas_existentes = {c["name"] for c in inspector.get_columns("perfil")}
-        colunas_novas = {"salario_base_30_dias", "salario_base_31_dias"} - colunas_existentes
+        tipos_coluna = {
+            "salario_base_30_dias": "NUMERIC(10, 2)",
+            "salario_base_31_dias": "NUMERIC(10, 2)",
+            "dia_fechamento_fatura": "INTEGER",
+        }
+        colunas_novas = set(tipos_coluna) - colunas_existentes
 
         with engine.begin() as conn:
             for coluna in colunas_novas:
-                conn.execute(text(f"ALTER TABLE perfil ADD COLUMN {coluna} NUMERIC(10, 2)"))
+                conn.execute(text(f"ALTER TABLE perfil ADD COLUMN {coluna} {tipos_coluna[coluna]}"))
 
 
 def seed_dados_iniciais() -> None:
@@ -54,6 +59,7 @@ def seed_dados_iniciais() -> None:
                 Perfil(
                     salario_base_30_dias=Decimal("1016.07"),
                     salario_base_31_dias=Decimal("1056.97"),
+                    dia_fechamento_fatura=25,
                 )
             )
 

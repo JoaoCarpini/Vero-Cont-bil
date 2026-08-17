@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.database import get_db
+from app.models.perfil import Perfil
 from app.models.transacao import Transacao
 from app.services.claude_parser import parse_mensagem
+from app.services.mes_referencia import calcular_mes_referencia
 from app.services.telegram_client import enviar_mensagem
 
 logger = logging.getLogger(__name__)
@@ -62,6 +64,9 @@ async def receber_mensagem(
     timestamp = int(mensagem.get("date", datetime.now(TZ).timestamp()))
     momento = datetime.fromtimestamp(timestamp, tz=TZ)
 
+    perfil = db.query(Perfil).first()
+    dia_fechamento = perfil.dia_fechamento_fatura if perfil else None
+
     transacao = Transacao(
         tipo=dados["tipo"],
         valor=dados["valor"],
@@ -71,7 +76,7 @@ async def receber_mensagem(
         hora=momento.time(),
         origem="telegram",
         texto_original=texto,
-        mes_referencia=momento.strftime("%Y-%m"),
+        mes_referencia=calcular_mes_referencia(momento.date(), dados.get("forma_pagamento"), dia_fechamento),
         usuario_id=user_id,
         usuario_nome=usuario_nome,
     )

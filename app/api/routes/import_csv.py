@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.database import get_db
+from app.models.perfil import Perfil
 from app.models.transacao import Transacao
+from app.services.mes_referencia import calcular_mes_referencia
 
 router = APIRouter()
 
@@ -18,7 +20,7 @@ FORMAS_PAGAMENTO_VALIDAS = {"credito", "debito", "pix", "dinheiro", "vr", "va"}
 COLUNAS_OBRIGATORIAS = {"data", "tipo", "valor", "categoria", "forma_pagamento"}
 
 
-def _validar_linha(linha: dict) -> tuple[Optional[Transacao], Optional[str]]:
+def _validar_linha(linha: dict, dia_fechamento: Optional[int]) -> tuple[Optional[Transacao], Optional[str]]:
     data_bruta = (linha.get("data") or "").strip()
     tipo = (linha.get("tipo") or "").strip().lower()
     valor_bruto = (linha.get("valor") or "").strip()
@@ -56,7 +58,7 @@ def _validar_linha(linha: dict) -> tuple[Optional[Transacao], Optional[str]]:
         hora=time(0, 0),
         origem="historico",
         texto_original=descricao,
-        mes_referencia=data.strftime("%Y-%m"),
+        mes_referencia=calcular_mes_referencia(data, forma_pagamento or None, dia_fechamento),
     )
     return transacao, None
 
@@ -83,11 +85,14 @@ async def importar_csv(
             detail=f"CSV precisa ter as colunas: {', '.join(sorted(COLUNAS_OBRIGATORIAS))}",
         )
 
+    perfil = db.query(Perfil).first()
+    dia_fechamento = perfil.dia_fechamento_fatura if perfil else None
+
     erros = []
     importadas = 0
 
     for numero, linha in enumerate(leitor, start=2):  # linha 1 é o cabeçalho
-        transacao, motivo = _validar_linha(linha)
+        transacao, motivo = _validar_linha(linha, dia_fechamento)
         if motivo:
             erros.append({"linha": numero, "motivo": motivo})
             continue
